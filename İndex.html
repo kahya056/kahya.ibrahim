@@ -1,0 +1,1736 @@
+import React, { useState, useEffect, useCallback, useMemo, useRef, createContext, useContext } from 'react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInAnonymously, onAuthStateChanged, signOut, signInWithCustomToken } from 'firebase/auth';
+import { getFirestore, collection, doc, onSnapshot, setDoc, getDoc, addDoc, deleteDoc, runTransaction, query, Timestamp, writeBatch, updateDoc, deleteField } from 'firebase/firestore';
+import { Dna, Users, KeyRound, LogOut, Sun, Moon, Languages, Plus, Minus, Maximize, UserPlus, Pencil, Trash2, Save, X, Eye, Shield, Timer, Search, Menu, Copy, Check, Users2, Clock, Ticket, Star, Phone, Mail, Link2, Instagram, UserCog, Lock, Unlock, Sparkles, RefreshCw } from 'lucide-react';
+
+// --- GOOGLE FONTS (SHOULD BE ADDED TO HTML HEAD) ---
+// <link rel="preconnect" href="https://fonts.googleapis.com">
+// <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+// <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@700&family=Cinzel:wght@700&display=swap" rel="stylesheet">
+
+const translations = {
+    tr: {
+        appName: "Aile Ağacı AI",
+        loginTitle: "Giriş Yap",
+        password: "Şifre",
+        login: "Giriş",
+        logout: "Çıkış",
+        adminLogin: "Yönetici Girişi",
+        viewerLogin: "İzleyici Girişi",
+        tempAdminLogin: "Geçici Yönetici Kodu",
+        loginError: "Yanlış şifre veya kod.",
+        attemptsLeft: "hakkınız kaldı.",
+        loginAttemptsExceeded: "Çok fazla hatalı giriş denemesi. Lütfen bekleyin.",
+        lockedOut: "saniye sonra tekrar deneyebilirsiniz.",
+        welcome: "Hoş Geldiniz",
+        role: "Rol",
+        admin: "Yönetici",
+        viewer: "İzleyici",
+        tempAdmin: "Geçici Yönetici",
+        roleDescription_viewer: "Sadece görüntüleme yetkisi.",
+        roleDescription_admin: "Tüm yönetim yetkileri.",
+        roleDescription_tempAdmin: "Süreli ve sınırlı yetki.",
+        treeView: "Aile Ağacı Görünümü",
+        zoomIn: "Yakınlaştır",
+        zoomOut: "Uzaklaştır",
+        resetView: "Görünümü Sıfırla",
+        addRootMember: "Kök Üye Ekle",
+        addMember: "Üye Ekle",
+        editMember: "Üyeyi Düzenle",
+        deleteMember: "Üyeyi Sil",
+        deleteConfirmation: "Bu üyeyi ve tüm alt üyelerini kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+        yes: "Evet, Sil",
+        no: "Hayır, İptal",
+        name: "Ad",
+        surname: "Soyad",
+        birthDate: "Doğum Tarihi",
+        deathDate: "Vefat Tarihi",
+        biography: "Biyografi",
+        photoUrl: "Fotoğraf URL'si",
+        photoUrlPlaceholder: "https://ornek.com/foto.jpg",
+        save: "Kaydet",
+        cancel: "İptal",
+        deceased: "Merhum / Merhume",
+        searchPlaceholder: "Ailede birini ara...",
+        noResults: "Arama sonucu bulunamadı.",
+        theme: "Temayı Değiştir",
+        tempAdminSuccess: "Giriş başarılı! Geçici Yönetici Modu.",
+        tempAdminError: "Kod geçersiz, süresi dolmuş veya tükenmiş.",
+        codeManager: "Kod Yöneticisi",
+        generateCode: "Kod Oluştur",
+        codeName: "Kod Adı (Not)",
+        codeNamePlaceholder: "Örn: Aile buluşması misafirleri",
+        codeType: "Kod Türü",
+        timeLimit: "Süre Limitli",
+        usageLimit: "Kullanım Limitli",
+        duration: "Süre",
+        minutes: "Dakika",
+        hours: "Saat",
+        days: "Gün",
+        uses: "Kullanım Hakkı",
+        maxAdds: "Maks. Üye Ekleme Sayısı",
+        generate: "Oluştur",
+        activeCodes: "Aktif Kodlar",
+        code: "Kod",
+        status: "Durum",
+        active: "Aktif",
+        expired: "Süresi Dolmuş",
+        used: "Tükenmiş",
+        expiresIn: "Bitiş:",
+        usesLeft: "kullanım kaldı",
+        copy: "Kopyala",
+        copied: "Kopyalandı!",
+        deleteCode: "Kodu Sil",
+        deleteCodeConfirmation: "Bu kodu kalıcı olarak silmek istediğinizden emin misiniz?",
+        noActiveCodes: "Aktif kod bulunmuyor.",
+        passwordManager: "Şifre Yöneticisi",
+        newAdminPassword: "Yeni Yönetici Şifresi",
+        newViewerPassword: "Yeni İzleyici Şifresi",
+        updatePasswords: "Şifreleri Güncelle",
+        passwordsUpdated: "Şifreler başarıyla güncellendi.",
+        passwordEmptyError: "Şifre alanları boş bırakılamaz.",
+        adminInfo: "Yönetici Bilgileri",
+        adminProfiles: "Yönetici Profilleri",
+        addNewAdmin: "Yeni Yönetici Ekle",
+        editAdminProfile: "Yönetici Profilini Düzenle",
+        addAdminProfile: "Yönetici Profili Ekle",
+        fullName: "Tam Ad",
+        title: "Unvan",
+        titlePlaceholder: "Örn: Aile Büyüğü",
+        phoneNumber: "Telefon Numarası",
+        emailAddress: "E-posta Adresi",
+        instagramLink: "Instagram Profili",
+        lockSubtree: "Dalı Kilitle",
+        unlockSubtree: "Dalın Kilidini Aç",
+        subtreeLocked: "Bu dal kilitlendi.",
+        setLockPassword: "Dal Parolasını Ayarla",
+        enterPassword: "Şifreyi Girin",
+        enterSubtreePassword: "Bu dal koruma altında. Görüntülemek için lütfen geçici erişim kodunu girin.",
+        unlock: "Kilidi Aç",
+        wrongPassword: "Yanlış kod. Tekrar deneyin.",
+        accessLimited: "Erişiminiz kısıtlıdır. Yalnızca yeni üye eklemeye izin verilir.",
+        generateBioWithAI: "✨ AI ile Biyografi Oluştur",
+        biographyKeywords: "Biyografi Anahtar Kelimeleri",
+        biographyKeywordsPlaceholder: "Örn: nazik, kitapları sever, çiftçi...",
+        generating: "Oluşturuluyor...",
+        hideDescendants: "Bu üyeden çıkan kökü gizle",
+        showDescendants: "Bu üyeden çıkan kökü göster",
+        protectedBranch: "Bu dal parola ile korunmaktadır",
+        accessCode: "Erişim Kodu",
+        protectedSubtrees: "Korunan Dallar",
+        viewTime: "Görünüm Süresi (dakika)",
+        regenerateCode: "Kodu Yenile",
+        noProtectedBranches: "Korunan dal bulunmuyor.",
+        gender: "Cinsiyet",
+        male: "Erkek",
+        female: "Kadın",
+        encryptRoot: "Bu kökü şifrele"
+    },
+    ar: {
+        appName: "شجرة العائلة بالذكاء الاصطناعي",
+        loginTitle: "تسجيل الدخول",
+        password: "كلمة المرور",
+        login: "دخول",
+        logout: "خروج",
+        adminLogin: "دخول المسؤول",
+        viewerLogin: "دخول الزائر",
+        tempAdminLogin: "رمز المسؤول المؤقت",
+        loginError: "كلمة مرور أو رمز غير صحيح.",
+        attemptsLeft: "محاولات متبقية.",
+        loginAttemptsExceeded: "محاولات تسجيل دخول خاطئة كثيرة جدًا. يرجى الانتظار.",
+        lockedOut: "يمكنك المحاولة مرة أخرى بعد ثانية.",
+        welcome: "أهلاً بك",
+        role: "الدور",
+        admin: "المسؤول",
+        viewer: "الزائر",
+        tempAdmin: "مسؤول مؤقت",
+        roleDescription_viewer: "إذن العرض فقط.",
+        roleDescription_admin: "كافة صلاحيات الإدارة.",
+        roleDescription_tempAdmin: "إذن محدود المدة.",
+        treeView: "عرض شجرة العائلة",
+        zoomIn: "تكبير",
+        zoomOut: "تصغير",
+        resetView: "إعادة تعيين العرض",
+        addRootMember: "إضافة عضو جذر",
+        addMember: "إضافة عضو",
+        editMember: "تعديل العضو",
+        deleteMember: "حذف العضو",
+        deleteConfirmation: "هل أنت متأكد أنك تريد حذف هذا العضو وجميع الأعضاء الفرعيين بشكل دائم؟ لا يمكن التراجع عن هذا الإجراء.",
+        yes: "نعم، احذف",
+        no: "لا، إلغاء",
+        name: "الاسم",
+        surname: "اللقب",
+        birthDate: "تاريخ الميلاد",
+        deathDate: "تاريخ الوفاة",
+        biography: "السيرة الذاتية",
+        photoUrl: "رابط الصورة",
+        photoUrlPlaceholder: "https://example.com/photo.jpg",
+        save: "حفظ",
+        cancel: "إلغاء",
+        deceased: "المرحوم / المرحومة",
+        searchPlaceholder: "ابحث عن شخص في العائلة...",
+        noResults: "لم يتم العثور على نتائج للبحث.",
+        theme: "تغيير السمة",
+        tempAdminSuccess: "تم الدخول بنجاح! وضع المسؤول المؤقت.",
+        tempAdminError: "الرمز غير صالح أو منتهي الصلاحية أو مستهلك.",
+        codeManager: "مدير الأكواد",
+        generateCode: "إنشاء كود",
+        codeName: "اسم الكود (ملاحظة)",
+        codeNamePlaceholder: "مثال: ضيوف لقاء العائلة",
+        codeType: "نوع الكود",
+        timeLimit: "محدود بالوقت",
+        usageLimit: "محدود بالاستخدام",
+        duration: "المدة",
+        minutes: "دقائق",
+        hours: "ساعات",
+        days: "أيام",
+        uses: "عدد الاستخدامات",
+        maxAdds: "الحد الأقصى لإضافة الأعضاء",
+        generate: "إنشاء",
+        activeCodes: "الأكواد النشطة",
+        code: "الكود",
+        status: "الحالة",
+        active: "نشط",
+        expired: "منتهي الصلاحية",
+        used: "مستخدم بالكامل",
+        expiresIn: "ينتهي في:",
+        usesLeft: "استخدامات متبقية",
+        copy: "نسخ",
+        copied: "تم النسخ!",
+        deleteCode: "حذف الكود",
+        deleteCodeConfirmation: "هل أنت متأكد أنك تريد حذف هذا الكود نهائيًا؟",
+        noActiveCodes: "لا توجد أكواد نشطة.",
+        passwordManager: "مدير كلمات المرور",
+        newAdminPassword: "كلمة مرور المسؤول الجديدة",
+        newViewerPassword: "كلمة مرور الزائر الجديدة",
+        updatePasswords: "تحديث كلمات المرور",
+        passwordsUpdated: "تم تحديث كلمات المرور بنجاح.",
+        passwordEmptyError: "حقول كلمة المرور لا يمكن أن تكون فارغة.",
+        adminInfo: "معلومات المسؤولين",
+        adminProfiles: "ملفات تعريف المسؤولين",
+        addNewAdmin: "إضافة مسؤول جديد",
+        editAdminProfile: "تعديل ملف تعريف المسؤول",
+        addAdminProfile: "إضافة ملف تعريف المسؤول",
+        fullName: "الاسم الكامل",
+        title: "اللقب",
+        titlePlaceholder: "مثال: كبير العائلة",
+        phoneNumber: "رقم الهاتف",
+        emailAddress: "البريد الإلكتروني",
+        instagramLink: "رابط انستغرام",
+        lockSubtree: "قفل الفرع",
+        unlockSubtree: "فتح قفل الفرع",
+        subtreeLocked: "هذا الفرع مقفل.",
+        setLockPassword: "تعيين كلمة مرور للفرع",
+        enterPassword: "أدخل كلمة المرور",
+        enterSubtreePassword: "هذا الفرع من العائلة محمي. يرجى إدخال كلمة مرور الوصول.",
+        unlock: "فتح القفل",
+        wrongPassword: "كلمة المرور غير صحيحة. حاول مرة أخرى.",
+        accessLimited: "وصولك محدود. يُسمح فقط بإضافة أعضاء جدد.",
+        generateBioWithAI: "✨ إنشاء سيرة ذاتية بالذكاء الاصطناعي",
+        biographyKeywords: "كلمات مفتاحية للسيرة الذاتية",
+        biographyKeywordsPlaceholder: "مثال: طيب القلب، يحب الكتب، مزارع...",
+        generating: "جاري الإنشاء...",
+        hideDescendants: "إخفاء جميع الفروع",
+        showDescendants: "إظهار جميع الفروع",
+        protectedBranch: "هذا الفرع محمي بكلمة مرور",
+        accessCode: "رمز الوصول",
+        protectedSubtrees: "الفروع المحمية",
+        viewTime: "مدة العرض (دقائق)",
+        regenerateCode: "توليد رمز جديد",
+        noProtectedBranches: "لا توجد فروع محمية.",
+        gender: "الجنس",
+        male: "ذكر",
+        female: "أنثى",
+        encryptRoot: "تشفير هذا الفرع"
+    }
+};
+
+
+const MAX_LOGIN_ATTEMPTS = 3;
+const LOCKOUT_DURATION_MS = 5 * 60 * 1000;
+
+const AppContext = createContext();
+
+// --- COMPONENTS ---
+
+const SplashScreen = ({ onFinish }) => {
+    const [phase, setPhase] = useState(0);
+    useEffect(() => {
+        const fontLink = document.createElement('link');
+        fontLink.href = "https://fonts.googleapis.com/css2?family=Amiri:wght@700&family=Cinzel:wght@700&display=swap";
+        fontLink.rel = "stylesheet";
+        document.head.appendChild(fontLink);
+        const timers = [
+            setTimeout(() => setPhase(1), 100),
+            setTimeout(() => setPhase(2), 1500),
+            setTimeout(() => setPhase(3), 4000),
+            setTimeout(onFinish, 5000)
+        ];
+        return () => timers.forEach(clearTimeout);
+    }, [onFinish]);
+    const getPhaseClass = (p) => phase >= p ? 'opacity-100' : 'opacity-0';
+    return (
+        <div className={`fixed inset-0 bg-gray-900 flex justify-center items-center z-[100] transition-opacity duration-1000 ${phase === 3 ? 'opacity-0' : 'opacity-100'}`}>
+            <div className="text-center text-white select-none">
+                <h1 style={{ fontFamily: "'Cinzel', serif" }} className={`text-4xl md:text-6xl text-shadow-glow transition-opacity duration-1000 ${getPhaseClass(1)}`}>
+                    AHMET MERVAN KAHYA
+                </h1>
+                <h2 style={{ fontFamily: "'Amiri', serif" }} className={`text-5xl md:text-7xl mt-4 transition-all duration-1000 delay-500 transform ${phase >= 2 ? 'translate-x-0 opacity-100' : 'translate-x-10 opacity-0'} ${getPhaseClass(2)}`} dir="rtl">
+                    أحمد مروان كهية
+                </h2>
+            </div>
+            <style>{`.text-shadow-glow { text-shadow: 0 0 8px rgba(255, 255, 255, 0.3), 0 0 10px rgba(255, 255, 255, 0.3); }`}</style>
+        </div>
+    );
+};
+
+const HamburgerMenu = ({ user, handleLogout, openAddModal, setCurrentPage }) => {
+    const t = translations[useContext(AppContext).language];
+    const [isOpen, setIsOpen] = useState(false);
+    const menuRef = useRef();
+
+    useEffect(() => {
+        const handleClickOutside = (event) => { if (menuRef.current && !menuRef.current.contains(event.target)) setIsOpen(false); };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+    
+    const menuItems = [
+        { label: t.treeView, icon: Dna, action: () => setCurrentPage('tree'), role: ['Admin', 'Viewer', 'tempAdmin'] },
+        // ** PERMISSION FIX **: "Add Root Member" is only for full Admins.
+        { label: t.addRootMember, icon: UserPlus, action: () => openAddModal(null), role: ['Admin'] },
+        { label: t.adminInfo, icon: UserCog, action: () => setCurrentPage('adminProfiles'), role: ['Admin', 'Viewer', 'tempAdmin'] },
+        { label: t.protectedSubtrees, icon: Lock, action: () => setCurrentPage('protectedSubtrees'), role: ['Admin'] },
+        { label: t.codeManager, icon: KeyRound, action: () => setCurrentPage('codeManager'), role: ['Admin'] },
+        { label: t.passwordManager, icon: Shield, action: () => setCurrentPage('passwordManager'), role: ['Admin'] },
+        { label: t.logout, icon: LogOut, action: handleLogout, role: ['Admin', 'Viewer', 'tempAdmin'] }
+    ];
+
+    return (
+        <div className="relative" ref={menuRef}>
+            <button onClick={() => setIsOpen(!isOpen)} className="p-2 text-white hover:bg-white/20 rounded-full"><Menu size={24} /></button>
+            {isOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl py-2 z-50">
+                    {menuItems.filter(item => user && item.role.includes(user.role)).map(item => (
+                        <button key={item.label} onClick={() => { item.action(); setIsOpen(false); }} className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
+                            <item.icon size={16} className="mr-3" />
+                            <span>{item.label}</span>
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
+const TopBar = ({ user, searchTerm, setSearchTerm, currentPage, openAddModal, handleLogout, resetView }) => {
+    const { language, setLanguage, theme, setTheme, setCurrentPage } = useContext(AppContext);
+    const t = translations[language];
+    return (
+        <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between z-30">
+            <div className="flex-grow">
+                {user && (<div className="flex items-center bg-black/20 backdrop-blur-sm text-white p-2 rounded-full text-sm shadow-lg w-fit"><span className="font-semibold mx-2">👋 {t.welcome},</span><span>{t[user.role]}</span></div>)}
+            </div>
+            <div className="flex items-center space-x-2 bg-black/20 backdrop-blur-sm p-1 rounded-full shadow-lg">
+                {currentPage === 'tree' && <div className="relative"><Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" /><input type="search" placeholder={t.searchPlaceholder} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="p-2 pl-9 rounded-full w-40 md:w-56 transition-all duration-300 bg-white/20 text-white placeholder-gray-300 border-none focus:ring-2 focus:ring-blue-400" /></div>}
+                <button onClick={() => setLanguage(language === 'tr' ? 'ar' : 'tr')} className="p-2 text-white hover:bg-white/20 rounded-full" title="Türkçe / العربية"><Languages size={20} /></button>
+                <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="p-2 text-white hover:bg-white/20 rounded-full" title={t.theme}>{theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}</button>
+                {user && <HamburgerMenu user={user} handleLogout={handleLogout} openAddModal={openAddModal} setCurrentPage={setCurrentPage} />}
+            </div>
+        </div>
+    );
+};
+
+const MemberCard = ({ member, onAddChild, onEdit, onDelete, isHighlighted, isLocked }) => {
+    const { language, user } = useContext(AppContext);
+    const t = translations[language];
+    const isDeceased = !!member.deathDate;
+    const nameToDisplay = member[`name_${language}`] || member.name_tr;
+    
+    // ** PERMISSION FIX **: "Edit" is only for full Admins.
+    const canEdit = user?.role === 'Admin';
+    const canDelete = user?.role === 'Admin';
+    const canAdd = user?.role === 'Admin' || (user?.role === 'tempAdmin' && user.maxAdds > 0 && (user.membersAdded || 0) < user.maxAdds);
+
+    return (
+        <div data-id={member.id} className={`relative group p-4 rounded-xl shadow-lg w-64 text-center transition-all duration-300 transform hover:-translate-y-1 ${isDeceased ? 'bg-red-900/20 dark:bg-red-900/50' : 'bg-white dark:bg-gray-800'}`}>
+            {isHighlighted && <div className="absolute inset-0 rounded-xl ring-4 ring-blue-500 ring-offset-2 ring-offset-gray-100 dark:ring-offset-gray-900 pointer-events-none animate-pulse"></div>}
+             {isLocked && <div className="absolute top-2 left-2 p-1.5 bg-yellow-500 text-white rounded-full"><Lock size={14}/></div>}
+            <img src={member.photoUrl || `https://placehold.co/100x100/e2e8f0/4a5568?text=${nameToDisplay ? nameToDisplay[0] : '?'}`} alt={nameToDisplay} className={`w-24 h-24 rounded-full mx-auto object-cover border-4 ${isDeceased ? 'border-gray-500' : 'border-blue-400'} ${isDeceased ? 'filter grayscale' : ''}`} onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/100x100/e2e8f0/4a5568?text=${nameToDisplay ? nameToDisplay[0] : '?'}`; }} />
+            <h3 className="mt-3 text-lg font-bold text-gray-900 dark:text-white">{nameToDisplay} {member[`surname_${language}`] || member.surname_tr}</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{member.birthDate} - {member.deathDate || '...'}</p>
+            {isDeceased && <p className="text-xs font-semibold text-red-700 dark:text-red-400 mt-1">{t.deceased}</p>}
+            <div className="absolute top-2 right-2 flex flex-col space-y-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                { canEdit && <button onClick={(e) => {e.stopPropagation(); onEdit(member)}} className="p-1.5 bg-blue-500 text-white rounded-full hover:bg-blue-600"><Pencil size={14}/></button> }
+                { canDelete && <button onClick={(e) => {e.stopPropagation(); onDelete(member)}} className="p-1.5 bg-red-600 text-white rounded-full hover:bg-red-700"><Trash2 size={14}/></button> }
+                { canAdd && <button onClick={(e) => {e.stopPropagation(); onAddChild(member.id)}} className="p-1.5 bg-green-500 text-white rounded-full hover:bg-green-600"><UserPlus size={14}/></button> }
+            </div>
+        </div>
+    );
+};
+
+const Modal = ({ isOpen, onClose, title, children }) => {
+    if (!isOpen) return null;
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-md flex flex-col max-h-[90vh]">
+                <div className="flex justify-between items-center p-4 border-b dark:border-gray-700 flex-shrink-0"><h2 className="text-2xl font-bold text-gray-900 dark:text-white">{title}</h2><button onClick={onClose} className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"><X size={24} /></button></div>
+                <div className="p-4 overflow-y-auto">{children}</div>
+            </div>
+        </div>
+    );
+};
+
+const MemberForm = ({ member, parentId, onSave, onCancel }) => {
+    const { language, user, handleLockSubtree } = useContext(AppContext);
+    const t = translations[language];
+    const [formData, setFormData] = useState({ name_tr: '', surname_tr: '', name_ar: '', surname_ar: '', birthDate: '', deathDate: '', biography_tr: '', biography_ar: '', photoUrl: '', gender: '', ...member });
+    const [bioKeywords, setBioKeywords] = useState('');
+    const [isGeneratingBio, setIsGeneratingBio] = useState(false);
+
+    const handleGenerateBiography = async () => {
+        if (!bioKeywords) return;
+        setIsGeneratingBio(true);
+
+        const generateInLanguage = async (lang, keywords) => {
+            const prompt = `Write a brief, warm, and engaging biography for a family tree entry based on these keywords: "${keywords}". The biography should be written in ${lang}.`;
+            const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+            const apiKey = ""; // API key will be injected by the environment
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if (result.candidates && result.candidates.length > 0) {
+                    return result.candidates[0].content.parts[0].text;
+                }
+                return `Error generating biography in ${lang}.`;
+            } catch (error) {
+                console.error(`Error generating biography in ${lang}:`, error);
+                return `Could not generate biography.`;
+            }
+        };
+
+        try {
+            const [trBio, arBio] = await Promise.all([
+                generateInLanguage('Turkish', bioKeywords),
+                generateInLanguage('Arabic', bioKeywords)
+            ]);
+
+            setFormData(prev => ({
+                ...prev,
+                biography_tr: trBio,
+                biography_ar: arBio
+            }));
+        } catch (error) {
+            console.error("Error in biography generation process:", error);
+        } finally {
+            setIsGeneratingBio(false);
+        }
+    };
+    
+    const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onSave(formData, parentId);
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input name="name_tr" value={formData.name_tr} onChange={handleChange} placeholder={`${t.name} (TR)`} className="p-2 border rounded dark:bg-gray-700 dark:border-gray-600" required />
+                <input name="name_ar" value={formData.name_ar} onChange={handleChange} placeholder={`${t.name} (AR)`} className="p-2 border rounded dark:bg-gray-700 dark:border-gray-600" dir="rtl" />
+                <input name="surname_tr" value={formData.surname_tr} onChange={handleChange} placeholder={`${t.surname} (TR)`} className="p-2 border rounded dark:bg-gray-700 dark:border-gray-600" required />
+                <input name="surname_ar" value={formData.surname_ar} onChange={handleChange} placeholder={`${t.surname} (AR)`} className="p-2 border rounded dark:bg-gray-700 dark:border-gray-600" dir="rtl" />
+                <input name="birthDate" type="date" value={formData.birthDate} onChange={handleChange} className="p-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+                <input name="deathDate" type="date" value={formData.deathDate} onChange={handleChange} className="p-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+            </div>
+             <div>
+                <label htmlFor="gender" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t.gender}</label>
+                <select id="gender" name="gender" value={formData.gender} onChange={handleChange} className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                    <option value="">--</option>
+                    <option value="male">{t.male}</option>
+                    <option value="female">{t.female}</option>
+                </select>
+            </div>
+            <input name="photoUrl" value={formData.photoUrl} onChange={handleChange} placeholder={t.photoUrlPlaceholder} className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+            
+            <div className="space-y-2 p-3 bg-blue-50 dark:bg-gray-700/50 rounded-lg">
+                 <label htmlFor="bioKeywords" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t.biographyKeywords}</label>
+                 <div className="flex gap-2">
+                    <input id="bioKeywords" value={bioKeywords} onChange={e => setBioKeywords(e.target.value)} placeholder={t.biographyKeywordsPlaceholder} className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"/>
+                    <button type="button" onClick={handleGenerateBiography} disabled={isGeneratingBio} className="px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-gray-400 flex items-center gap-2">
+                        {isGeneratingBio ? <Dna size={16} className="animate-spin"/> : <Sparkles size={16} />}
+                        <span>{isGeneratingBio ? t.generating : t.generate}</span>
+                    </button>
+                 </div>
+            </div>
+
+            <textarea name="biography_tr" value={formData.biography_tr} onChange={handleChange} placeholder={`${t.biography} (TR)`} rows="3" className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"></textarea>
+            <textarea name="biography_ar" value={formData.biography_ar} onChange={handleChange} placeholder={`${t.biography} (AR)`} rows="3" className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" dir="rtl"></textarea>
+            
+            <div className="flex justify-between items-center pt-2">
+                 {user?.role === 'Admin' && member && (
+                    <button type="button" onClick={() => handleLockSubtree(member.id, !member.isSubtreeLocked)} className={`px-4 py-2 text-white rounded-lg flex items-center gap-2 ${member.isSubtreeLocked ? 'bg-green-600 hover:bg-green-700' : 'bg-yellow-600 hover:bg-yellow-700'}`}>
+                        {member.isSubtreeLocked ? <Unlock size={16} /> : <Lock size={16} />}
+                        {member.isSubtreeLocked ? t.unlockSubtree : t.lockSubtree}
+                    </button>
+                 )}
+
+                <div className="flex justify-end space-x-2 rtl:space-x-reverse flex-grow">
+                    <button type="button" onClick={onCancel} className="px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded-lg hover:bg-gray-400">{t.cancel}</button>
+                    <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center"><Save size={16} className="mr-2"/>{t.save}</button>
+                </div>
+            </div>
+        </form>
+    );
+};
+
+const FamilyTree = () => {
+    const { user, members, searchTerm, openAddModal, openEditModal, setTransform, transform, db, appId, logActivity, unlockedSubtrees, newlyAddedMemberId, setNewlyAddedMemberId, resetTrigger, openUnlockModal } = useContext(AppContext);
+    const t = translations[useContext(AppContext).language];
+    const [isDragging, setIsDragging] = useState(false);
+    const [startDrag, setStartDrag] = useState({ x: 0, y: 0 });
+    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+    const [memberToDelete, setMemberToDelete] = useState(null);
+    
+    const [nodePositions, setNodePositions] = useState({});
+    const [lines, setLines] = useState([]);
+    const [treeDimensions, setTreeDimensions] = useState({ width: 0, height: 0 });
+
+    const containerRef = useRef(null);
+    const initialDistance = useRef(null);
+    
+    const CARD_WIDTH = 256;
+    const CARD_HEIGHT = 160;
+    const HORIZONTAL_GAP = 40;
+    const VERTICAL_GAP = 100;
+
+    const membersById = useMemo(() => members.reduce((acc, m) => ({...acc, [m.id]: m }), {}), [members]);
+    
+    const visibleMembers = useMemo(() => {
+        if (user?.role === 'Admin') return members;
+        const unlockedSet = new Set(unlockedSubtrees);
+
+        return members.filter(member => {
+            let parent = membersById[member.parentId];
+            while (parent) {
+                if (parent.isSubtreeLocked && !unlockedSet.has(parent.id)) {
+                    return false; 
+                }
+                parent = membersById[parent.parentId];
+            }
+            return true;
+        });
+    }, [members, user, unlockedSubtrees, membersById]);
+
+    const filteredMembers = useMemo(() => {
+        if (!searchTerm) return visibleMembers;
+        const lowerCaseSearch = searchTerm.toLowerCase();
+        const searchMatches = new Set(members.filter(m =>
+            (m.name_tr || '').toLowerCase().includes(lowerCaseSearch) ||
+            (m.surname_tr || '').toLowerCase().includes(lowerCaseSearch) ||
+            (m.name_ar || '').toLowerCase().includes(lowerCaseSearch) ||
+            (m.surname_ar || '').toLowerCase().includes(lowerCaseSearch)
+        ).map(m => m.id));
+        
+        return visibleMembers.filter(m => searchMatches.has(m.id));
+
+    }, [searchTerm, visibleMembers, members]);
+
+    const highlightedMemberIds = useMemo(() => searchTerm ? new Set(filteredMembers.map(m => m.id)) : new Set(), [filteredMembers, searchTerm]);
+
+    const tree = useMemo(() => {
+        const localMembersById = visibleMembers.reduce((acc, m) => ({...acc, [m.id]: {...m, children: []} }), {});
+        const roots = [];
+        visibleMembers.forEach(member => {
+            if (member.parentId && localMembersById[member.parentId]) {
+                localMembersById[member.parentId].children.push(localMembersById[member.id]);
+            } else {
+                roots.push(localMembersById[member.id]);
+            }
+        });
+        return roots;
+    }, [visibleMembers]);
+
+    useEffect(() => {
+        const positions = {};
+        let maxX = 0;
+        let maxY = 0;
+
+        const calculateSubtreeWidth = (node) => {
+            if (node.children.length === 0) {
+                return CARD_WIDTH;
+            }
+            let width = 0;
+            node.children.forEach(child => {
+                width += calculateSubtreeWidth(child);
+            });
+            return width + (node.children.length - 1) * HORIZONTAL_GAP;
+        };
+
+        const calculateNodePositions = (node, x, y) => {
+            const childrenWidth = node.children.reduce((sum, child) => sum + calculateSubtreeWidth(child), 0) + Math.max(0, node.children.length - 1) * HORIZONTAL_GAP;
+            const nodeX = x + (childrenWidth - CARD_WIDTH) / 2;
+            
+            positions[node.id] = { x: nodeX, y };
+            maxX = Math.max(maxX, nodeX + CARD_WIDTH);
+            maxY = Math.max(maxY, y + CARD_HEIGHT);
+
+            let currentChildX = x;
+            node.children.forEach(child => {
+                calculateNodePositions(child, currentChildX, y + CARD_HEIGHT + VERTICAL_GAP);
+                currentChildX += calculateSubtreeWidth(child) + HORIZONTAL_GAP;
+            });
+        };
+
+        let currentX = 0;
+        tree.forEach(root => {
+            calculateNodePositions(root, currentX, 0);
+            currentX += calculateSubtreeWidth(root) + HORIZONTAL_GAP * 2;
+        });
+
+        setNodePositions(positions);
+        setTreeDimensions({ width: maxX, height: maxY });
+    }, [tree]);
+
+    useEffect(() => {
+        const newLines = [];
+        visibleMembers.forEach(member => {
+            if (member.parentId && nodePositions[member.id] && nodePositions[member.parentId]) {
+                const parentPos = nodePositions[member.parentId];
+                const childPos = nodePositions[member.id];
+
+                const x1 = parentPos.x + CARD_WIDTH / 2;
+                const y1 = parentPos.y + CARD_HEIGHT;
+                const x2 = childPos.x + CARD_WIDTH / 2;
+                const y2 = childPos.y;
+                
+                newLines.push({
+                    key: `${member.parentId}-${member.id}`,
+                    d: `M ${x1} ${y1} C ${x1} ${y1 + VERTICAL_GAP / 2}, ${x2} ${y2 - VERTICAL_GAP / 2}, ${x2} ${y2}`
+                });
+            }
+        });
+        setLines(newLines);
+    }, [nodePositions, visibleMembers]);
+    
+    const panToNode = useCallback((nodeId) => {
+        if (nodePositions[nodeId] && containerRef.current) {
+            const nodePos = nodePositions[nodeId];
+            const containerWidth = containerRef.current.clientWidth;
+            const containerHeight = containerRef.current.clientHeight;
+
+            const newX = -nodePos.x * transform.scale + containerWidth / 2 - (CARD_WIDTH * transform.scale) / 2;
+            const newY = -nodePos.y * transform.scale + containerHeight / 2 - (CARD_HEIGHT * transform.scale) / 2;
+
+            setTransform(t => ({...t, x: newX, y: newY}));
+        }
+    }, [nodePositions, transform.scale, setTransform]);
+
+    useEffect(() => {
+        if (newlyAddedMemberId && nodePositions[newlyAddedMemberId]) {
+            setTimeout(() => {
+                panToNode(newlyAddedMemberId);
+                setNewlyAddedMemberId(null);
+            }, 200);
+        }
+    }, [newlyAddedMemberId, nodePositions, panToNode, setNewlyAddedMemberId]);
+    
+    useEffect(() => {
+       if (resetTrigger > 0) {
+            if (treeDimensions.width > 0 && containerRef.current) {
+                const containerWidth = containerRef.current.clientWidth;
+                const containerHeight = containerRef.current.clientHeight;
+
+                const scaleX = containerWidth / (treeDimensions.width + 100);
+                const scaleY = containerHeight / (treeDimensions.height + 100);
+                const newScale = Math.min(scaleX, scaleY, 1);
+
+                const newX = (containerWidth - treeDimensions.width * newScale) / 2;
+                const newY = (containerHeight - treeDimensions.height * newScale) / 2;
+
+                setTransform({ x: newX, y: newY, scale: newScale });
+            }
+       }
+    }, [resetTrigger, treeDimensions, setTransform]);
+
+
+    const handlePan = useCallback((dx, dy) => setTransform(t => ({ ...t, x: t.x + dx, y: t.y + dy })), [setTransform]);
+    const handleWheel = (e) => { e.preventDefault(); const s = -e.deltaY * 0.001; setTransform(p => ({...p, scale: Math.min(Math.max(0.2, p.scale + s), 3)}));};
+    const handleMouseDown = (e) => { if (e.target === e.currentTarget) { setIsDragging(true); setStartDrag({ x: e.clientX, y: e.clientY }); e.currentTarget.style.cursor = 'grabbing'; }};
+    const handleMouseMove = (e) => { if (isDragging) { handlePan(e.clientX - startDrag.x, e.clientY - startDrag.y); setStartDrag({ x: e.clientX, y: e.clientY }); }};
+    const handleMouseUp = (e) => { if (isDragging) { setIsDragging(false); e.currentTarget.style.cursor = 'grab'; }};
+
+    const handleTouchStart = (e) => {
+        if (e.touches.length === 1) {
+            setIsDragging(true);
+            setStartDrag({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+        } else if (e.touches.length === 2) {
+            initialDistance.current = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        }
+    };
+
+    const handleTouchMove = (e) => {
+        if (e.touches.length === 1 && isDragging) {
+            handlePan(e.touches[0].clientX - startDrag.x, e.touches[0].clientY - startDrag.y);
+            setStartDrag({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+        } else if (e.touches.length === 2 && initialDistance.current) {
+            const newDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+            const scale = newDist / initialDistance.current;
+            setTransform(p => ({...p, scale: Math.min(Math.max(0.2, p.scale * scale), 3)}));
+            initialDistance.current = newDist;
+        }
+    };
+
+    const handleTouchEnd = () => {
+        setIsDragging(false);
+        initialDistance.current = null;
+    };
+
+    const handleDeleteRequest = (member) => { setMemberToDelete(member); setIsDeleteConfirmOpen(true); };
+    const confirmDeleteMember = async () => {
+        if (!memberToDelete) return;
+        const allMembers = [...members];
+        const getAllDescendants = (memberId, mems) => {
+            let children = mems.filter(m => m.parentId === memberId);
+            let descendants = [...children];
+            children.forEach(child => {
+                descendants = [...descendants, ...getAllDescendants(child.id, mems)];
+            });
+            return descendants;
+        };
+        const descendantsToDelete = getAllDescendants(memberToDelete.id, allMembers);
+        const idsToDelete = [memberToDelete.id, ...descendantsToDelete.map(d => d.id)];
+        const batch = writeBatch(db);
+        idsToDelete.forEach(id => batch.delete(doc(db, `artifacts/${appId}/public/data/familyMembers`, id)));
+        await batch.commit();
+        logActivity('delete_member_recursive', user.role, { memberId: memberToDelete.id, name: memberToDelete.name_tr, deletedCount: idsToDelete.length });
+        setIsDeleteConfirmOpen(false);
+        setMemberToDelete(null);
+    };
+    
+    const handleCardClick = (member) => {
+        if (user?.role === 'Admin' || user?.role === 'tempAdmin') return; 
+
+        if (member.isSubtreeLocked && !unlockedSubtrees.includes(member.id)) {
+            openUnlockModal(member);
+        }
+    };
+    
+    return (
+        <>
+            <div ref={containerRef} className="w-full h-full overflow-hidden relative bg-gray-100 dark:bg-gray-900" onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onWheel={handleWheel} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd} style={{ cursor: 'grab' }}>
+                <div style={{ transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`, transformOrigin: 'top left', transition: isDragging ? 'none' : 'transform 0.1s ease-out' }}>
+                    <div style={{ position: 'relative', width: treeDimensions.width, height: treeDimensions.height }}>
+                        <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'visible' }}>
+                            <g>
+                                {lines.map(line => <path key={line.key} d={line.d} stroke="rgb(161 161 170 / 0.5)" strokeWidth="2" fill="none" />)}
+                            </g>
+                        </svg>
+                        {visibleMembers.map(member => {
+                            const pos = nodePositions[member.id];
+                            if (!pos) return null;
+                            return (
+                                <div key={member.id} style={{ position: 'absolute', left: `${pos.x}px`, top: `${pos.y}px`}} onClick={() => handleCardClick(member)}>
+                                    <MemberCard member={member} onAddChild={openAddModal} onEdit={openEditModal} onDelete={handleDeleteRequest} isHighlighted={highlightedMemberIds.has(member.id)} isLocked={!!member.isSubtreeLocked}/>
+                                </div>
+                            );
+                        })}
+                         {(user?.role === 'Admin' || user?.role === 'tempAdmin') && visibleMembers.length === 0 && (
+                            <div style={{position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)'}}>
+                                <button onClick={() => openAddModal(null)} className="p-4 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700 flex items-center"><UserPlus size={24} className="mr-2"/>{t.addRootMember}</button>
+                            </div>
+                         )}
+                    </div>
+                </div>
+            </div>
+            <Modal isOpen={isDeleteConfirmOpen} onClose={() => setIsDeleteConfirmOpen(false)} title={t.deleteMember}><div><p className="text-sm">{t.deleteConfirmation}</p><div className="flex justify-end space-x-2 rtl:space-x-reverse mt-6"><button onClick={() => setIsDeleteConfirmOpen(false)} className="px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded-lg hover:bg-gray-400">{t.no}</button><button onClick={confirmDeleteMember} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">{t.yes}</button></div></div></Modal>
+        </>
+    );
+};
+
+const PasswordManagerPage = () => {
+    const { db, appId, logActivity, language } = useContext(AppContext);
+    const t = translations[language];
+
+    const [adminPassword, setAdminPassword] = useState('');
+    const [viewerPassword, setViewerPassword] = useState('');
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [message, setMessage] = useState({ type: '', text: '' });
+
+    const handleUpdate = async (e) => {
+        e.preventDefault();
+        if (!adminPassword.trim() || !viewerPassword.trim()) {
+            setMessage({ type: 'error', text: t.passwordEmptyError });
+            return;
+        }
+
+        setIsUpdating(true);
+        setMessage({ type: '', text: '' });
+
+        const passwordsRef = doc(db, `artifacts/${appId}/public/data/siteInfo`, 'passwords');
+
+        try {
+            await setDoc(passwordsRef, {
+                admin: adminPassword,
+                viewer: viewerPassword
+            }, { merge: true });
+
+            setMessage({ type: 'success', text: t.passwordsUpdated });
+            setAdminPassword('');
+            setViewerPassword('');
+            logActivity('update_passwords', 'Admin');
+
+            setTimeout(() => setMessage({ type: '', text: '' }), 4000);
+        } catch (error) {
+            console.error("Error updating passwords:", error);
+            setMessage({ type: 'error', text: 'An error occurred.' });
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    return (
+         <div className="p-4 md:p-8 max-w-xl mx-auto text-gray-900 dark:text-gray-100">
+            <h1 className="text-3xl font-bold mb-6">{t.passwordManager}</h1>
+            <form onSubmit={handleUpdate} className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md space-y-6">
+                 <div>
+                    <label htmlFor="adminPass" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t.newAdminPassword}</label>
+                    <input type="password" id="adminPass" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} className="mt-1 w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" required />
+                </div>
+                 <div>
+                    <label htmlFor="viewerPass" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t.newViewerPassword}</label>
+                    <input type="password" id="viewerPass" value={viewerPassword} onChange={e => setViewerPassword(e.target.value)} className="mt-1 w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" required />
+                </div>
+                {message.text && (
+                    <p className={`text-sm text-center ${message.type === 'error' ? 'text-red-500' : 'text-green-500'}`}>{message.text}</p>
+                )}
+                 <button type="submit" disabled={isUpdating} className="w-full py-3 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:bg-gray-400 flex items-center justify-center transition-colors">
+                    {isUpdating ? <Dna className="animate-spin" size={20} /> : t.updatePasswords}
+                </button>
+            </form>
+        </div>
+    );
+};
+
+const CodeManagerPage = () => {
+    const { db, appId, user, codes, language } = useContext(AppContext);
+    const t = translations[language];
+
+    const [codeName, setCodeName] = useState('');
+    const [codeType, setCodeType] = useState('time');
+    const [durationValue, setDurationValue] = useState(1);
+    const [durationUnit, setDurationUnit] = useState('hours');
+    const [usesValue, setUsesValue] = useState(1);
+    const [maxAdds, setMaxAdds] = useState(1);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [copiedCode, setCopiedCode] = useState(null);
+
+    const generateUniqueCode = async () => {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let code;
+        let isUnique = false;
+        while (!isUnique) {
+            code = '';
+            for (let i = 0; i < 6; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            const codeRef = doc(db, `artifacts/${appId}/public/data/tempAdminCodes`, code);
+            const docSnap = await getDoc(codeRef);
+            if (!docSnap.exists()) {
+                isUnique = true;
+            }
+        }
+        return code;
+    };
+
+    const handleGenerateCode = async (e) => {
+        e.preventDefault();
+        setIsGenerating(true);
+
+        const code = await generateUniqueCode();
+        const codeRef = doc(db, `artifacts/${appId}/public/data/tempAdminCodes`, code);
+
+        const newCodeData = {
+            id: code,
+            name: codeName || `Code ${code}`,
+            type: codeType,
+            maxAdds: Number(maxAdds),
+            createdAt: Timestamp.now(),
+            createdBy: user.uid,
+        };
+
+        if (codeType === 'time') {
+            const now = new Date();
+            let multiplier = 60 * 60 * 1000; // hours
+            if (durationUnit === 'minutes') multiplier = 60 * 1000;
+            if (durationUnit === 'days') multiplier = 24 * 60 * 60 * 1000;
+            now.setTime(now.getTime() + durationValue * multiplier);
+            newCodeData.expiresAt = Timestamp.fromDate(now);
+        } else {
+            newCodeData.initialUses = Number(usesValue);
+            newCodeData.usesLeft = Number(usesValue);
+        }
+
+        try {
+            await setDoc(codeRef, newCodeData);
+            setCodeName('');
+            setMaxAdds(1);
+            setUsesValue(1);
+            setDurationValue(1);
+        } catch (error) {
+            console.error("Error generating code:", error);
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+    
+    const handleDeleteCode = async (codeId) => {
+        // A custom modal should be used here instead of window.confirm
+        const codeRef = doc(db, `artifacts/${appId}/public/data/tempAdminCodes`, codeId);
+        await deleteDoc(codeRef);
+    };
+    
+    const handleCopy = (code) => {
+        navigator.clipboard.writeText(code);
+        setCopiedCode(code);
+        setTimeout(() => setCopiedCode(null), 2000);
+    };
+
+    const renderCodeStatus = (c) => {
+        const now = Timestamp.now();
+        if (c.type === 'time' && c.expiresAt < now) {
+            return { text: t.expired, color: 'text-red-500', icon: <Clock size={14} /> };
+        }
+        if (c.type === 'usage' && c.usesLeft <= 0) {
+            return { text: t.used, color: 'text-yellow-500', icon: <Users2 size={14} /> };
+        }
+        return { text: t.active, color: 'text-green-500', icon: <Check size={14} /> };
+    };
+    
+    const sortedCodes = useMemo(() => {
+        return [...codes].sort((a, b) => b.createdAt.toDate() - a.createdAt.toDate());
+    }, [codes]);
+
+
+    return (
+        <div className="p-4 md:p-8 max-w-7xl mx-auto text-gray-900 dark:text-gray-100">
+            <h1 className="text-3xl font-bold mb-6">{t.codeManager}</h1>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-1">
+                    <form onSubmit={handleGenerateCode} className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md space-y-4">
+                        <h2 className="text-xl font-semibold mb-2">{t.generateCode}</h2>
+                        <div>
+                            <label htmlFor="codeName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t.codeName}</label>
+                            <input type="text" id="codeName" value={codeName} onChange={e => setCodeName(e.target.value)} placeholder={t.codeNamePlaceholder} className="mt-1 w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"/>
+                        </div>
+                        <div>
+                           <label htmlFor="maxAdds" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t.maxAdds}</label>
+                           <input type="number" id="maxAdds" value={maxAdds} onChange={e => setMaxAdds(Math.max(0, e.target.value))} min="0" className="mt-1 w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"/>
+                           <p className="text-xs text-gray-500 mt-1">0 = {t.addMember} yetkisi yok.</p>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t.codeType}</label>
+                            <div className="mt-1 flex rounded-md shadow-sm">
+                                <button type="button" onClick={() => setCodeType('time')} className={`px-4 py-2 rounded-l-md flex-1 text-sm ${codeType === 'time' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'}`}>{t.timeLimit}</button>
+                                <button type="button" onClick={() => setCodeType('usage')} className={`px-4 py-2 rounded-r-md flex-1 text-sm ${codeType === 'usage' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'}`}>{t.usageLimit}</button>
+                            </div>
+                        </div>
+                        {codeType === 'time' ? (
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t.duration}</label>
+                                <div className="flex gap-2">
+                                    <input type="number" value={durationValue} onChange={e => setDurationValue(Math.max(1, e.target.value))} min="1" className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"/>
+                                    <select value={durationUnit} onChange={e => setDurationUnit(e.target.value)} className="p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                                        <option value="minutes">{t.minutes}</option>
+                                        <option value="hours">{t.hours}</option>
+                                        <option value="days">{t.days}</option>
+                                    </select>
+                                </div>
+                            </div>
+                        ) : (
+                             <div>
+                                <label htmlFor="usesValue" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t.uses}</label>
+                                <input type="number" id="usesValue" value={usesValue} onChange={e => setUsesValue(Math.max(1, e.target.value))} min="1" className="mt-1 w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600"/>
+                            </div>
+                        )}
+                        <button type="submit" disabled={isGenerating} className="w-full py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 flex items-center justify-center">
+                            {isGenerating ? <Dna className="animate-spin" size={20} /> : <>{t.generate}</>}
+                        </button>
+                    </form>
+                </div>
+                <div className="lg:col-span-2">
+                    <h2 className="text-xl font-semibold mb-4">{t.activeCodes}</h2>
+                    <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-2">
+                      {sortedCodes.length > 0 ? sortedCodes.map(c => {
+                          const status = renderCodeStatus(c);
+                          return (
+                              <div key={c.id} className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                  <div className="flex-1">
+                                      <div className="flex items-center gap-3">
+                                          <p className="font-mono text-lg font-bold text-blue-500 dark:text-blue-400 tracking-wider">{c.id}</p>
+                                          <div className={`flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full ${status.color.replace('text-', 'bg-')} bg-opacity-10 ${status.color}`}>
+                                              {status.icon} {status.text}
+                                          </div>
+                                      </div>
+                                      <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{c.name}</p>
+                                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 flex items-center flex-wrap gap-x-4 gap-y-1">
+                                          {c.type === 'time' ? (
+                                              <div className="flex items-center gap-1"><Clock size={12}/>{t.expiresIn} {c.expiresAt.toDate().toLocaleString()}</div>
+                                          ) : (
+                                              <div className="flex items-center gap-1"><Ticket size={12}/>{c.usesLeft} / {c.initialUses} {t.usesLeft}</div>
+                                          )}
+                                          <div className="flex items-center gap-1"><Star size={12}/>{t.maxAdds}: {c.maxAdds}</div>
+                                      </div>
+                                  </div>
+                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                      <button onClick={() => handleCopy(c.id)} className="p-2 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                                          {copiedCode === c.id ? <Check size={16} className="text-green-500"/> : <Copy size={16} />}
+                                      </button>
+                                      <button onClick={() => handleDeleteCode(c.id)} className="p-2 rounded-md bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/60 transition-colors">
+                                          <Trash2 size={16} />
+                                      </button>
+                                  </div>
+                              </div>
+                          )
+                      }) : <p className="text-gray-500">{t.noActiveCodes}</p>}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const AdminProfileFormModal = ({ isOpen, onClose, profile, onSave }) => {
+    const { language } = useContext(AppContext);
+    const t = translations[language];
+    const [formData, setFormData] = useState({ name: '', title: '', phone: '', email: '', instagram: '' });
+
+    useEffect(() => {
+        if (profile) {
+            setFormData({
+                name: profile.name || '',
+                title: profile.title || '',
+                phone: profile.phone || '',
+                email: profile.email || '',
+                instagram: profile.instagram || ''
+            });
+        } else {
+            setFormData({ name: '', title: '', phone: '', email: '', instagram: '' });
+        }
+    }, [profile, isOpen]);
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onSave(formData);
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={profile ? t.editAdminProfile : t.addAdminProfile}>
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium">{t.fullName}</label>
+                    <input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" required />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium">{t.title}</label>
+                    <input value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} placeholder={t.titlePlaceholder} className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium">{t.phoneNumber}</label>
+                    <input value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium">{t.emailAddress}</label>
+                    <input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium">{t.instagramLink}</label>
+                    <input value={formData.instagram} onChange={e => setFormData({ ...formData, instagram: e.target.value })} className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                    <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded-md">{t.cancel}</button>
+                    <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-md">{t.save}</button>
+                </div>
+            </form>
+        </Modal>
+    );
+};
+
+
+const AdminProfilesPage = () => {
+    const { user, adminProfiles, db, appId, language } = useContext(AppContext);
+    const t = translations[language];
+    const [editingProfile, setEditingProfile] = useState(null);
+    const [isFormOpen, setIsFormOpen] = useState(false);
+    const [viewingProfile, setViewingProfile] = useState(null);
+
+    const handleSaveProfile = async (formData) => {
+        const isEditing = !!editingProfile;
+        const docRef = isEditing
+            ? doc(db, `artifacts/${appId}/public/data/adminProfiles`, editingProfile.id)
+            : doc(collection(db, `artifacts/${appId}/public/data/adminProfiles`));
+        
+        await setDoc(docRef, formData, { merge: true });
+        setIsFormOpen(false);
+        setEditingProfile(null);
+    };
+
+    const handleDeleteProfile = async (profileId) => {
+        // A custom modal should be used here instead of window.confirm
+        await deleteDoc(doc(db, `artifacts/${appId}/public/data/adminProfiles`, profileId));
+    };
+
+    if (user?.role !== 'Admin') {
+        // Viewer UI
+        return (
+            <div className="p-4 md:p-8 max-w-2xl mx-auto text-gray-900 dark:text-gray-100">
+                <h1 className="text-3xl font-bold mb-6">{t.adminInfo}</h1>
+                <div className="space-y-3">
+                    {adminProfiles.map(profile => (
+                        <div key={profile.id} onClick={() => setViewingProfile(profile)} className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400">{profile.name}</h3>
+                            {profile.title && <p className="text-sm text-gray-500 dark:text-gray-400">{profile.title}</p>}
+                        </div>
+                    ))}
+                </div>
+                 <Modal isOpen={!!viewingProfile} onClose={() => setViewingProfile(null)} title={viewingProfile?.name || ''}>
+                    {viewingProfile && (
+                         <div className="space-y-3">
+                             <h3 className="text-xl font-bold text-gray-900 dark:text-white">{viewingProfile.name}</h3>
+                             {viewingProfile.title && <p className="text-md text-gray-600 dark:text-gray-300">{viewingProfile.title}</p>}
+                            {viewingProfile.phone && <div className="flex items-center gap-3 pt-2"><Phone size={16} className="text-gray-400"/><a href={`tel:${viewingProfile.phone}`}>{viewingProfile.phone}</a></div>}
+                            {viewingProfile.email && <div className="flex items-center gap-3"><Mail size={16} className="text-gray-400"/><a href={`mailto:${viewingProfile.email}`}>{viewingProfile.email}</a></div>}
+                            {viewingProfile.instagram && (
+                                <div className="flex items-center gap-3">
+                                    <Instagram size={16} className="text-gray-400"/>
+                                    <a href={viewingProfile.instagram.startsWith('http') ? viewingProfile.instagram : `https://instagram.com/${viewingProfile.instagram}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                                        {viewingProfile.instagram.split('/').pop() || viewingProfile.instagram}
+                                    </a>
+                                </div>
+                            )}
+                         </div>
+                    )}
+                </Modal>
+            </div>
+        )
+    }
+
+    // Admin UI
+    return (
+        <div className="p-4 md:p-8 max-w-4xl mx-auto text-gray-900 dark:text-gray-100">
+            <div className="flex justify-between items-center mb-6">
+                 <h1 className="text-3xl font-bold">{t.adminProfiles}</h1>
+                 <button onClick={() => { setEditingProfile(null); setIsFormOpen(true); }} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                     <UserPlus size={16}/> {t.addNewAdmin}
+                 </button>
+            </div>
+            <div className="space-y-3">
+                {adminProfiles.map(profile => (
+                     <div key={profile.id} className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm flex justify-between items-center">
+                         <div>
+                            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">{profile.name}</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">{profile.title || 'Admin'}</p>
+                         </div>
+                         <div className="flex gap-2">
+                            <button onClick={() => { setEditingProfile(profile); setIsFormOpen(true); }} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full"><Pencil size={16}/></button>
+                            <button onClick={() => handleDeleteProfile(profile.id)} className="p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-full"><Trash2 size={16}/></button>
+                         </div>
+                     </div>
+                ))}
+            </div>
+            <AdminProfileFormModal
+                isOpen={isFormOpen}
+                onClose={() => setIsFormOpen(false)}
+                profile={editingProfile}
+                onSave={handleSaveProfile}
+            />
+        </div>
+    );
+};
+
+const LoginScreen = ({ onLogin }) => {
+    const { language, loginMessage, setLoginMessage } = useContext(AppContext);
+    const t = translations[language];
+    const [password, setPassword] = useState('');
+    const [loginAs, setLoginAs] = useState('Viewer');
+    const [lockoutTime, setLockoutTime] = useState(() => parseInt(localStorage.getItem('lockoutEndTime') || '0', 10));
+    const [countdown, setCountdown] = useState(0);
+
+    useEffect(() => {
+        let timer;
+        const now = Date.now();
+        if (lockoutTime > now) {
+            setCountdown(Math.ceil((lockoutTime - now) / 1000));
+            timer = setInterval(() => {
+                const remaining = Math.ceil((lockoutTime - Date.now()) / 1000);
+                if (remaining > 0) {
+                    setCountdown(remaining);
+                } else {
+                    setCountdown(0);
+                    setLockoutTime(0);
+                    localStorage.removeItem('lockoutEndTime');
+                    localStorage.removeItem('loginAttempts');
+                    setLoginMessage({type: '', text: ''});
+                    clearInterval(timer);
+                }
+            }, 1000);
+        }
+        return () => clearInterval(timer);
+    }, [lockoutTime, setLoginMessage]);
+
+    const handleLoginAttempt = async (e) => {
+        e.preventDefault();
+        if(!password.trim()){
+            setLoginMessage({type: 'error', text: t.passwordEmptyError});
+            return;
+        }
+        if (lockoutTime > Date.now()) {
+            setLoginMessage({type: 'error', text: t.loginAttemptsExceeded});
+            return;
+        }
+        const result = await onLogin(password, loginAs);
+        if (!result.success) {
+            if (loginAs !== 'tempAdmin') {
+                const newAttempts = (parseInt(localStorage.getItem('loginAttempts') || '0')) + 1;
+                localStorage.setItem('loginAttempts', newAttempts.toString());
+                if (newAttempts >= MAX_LOGIN_ATTEMPTS) {
+                    const newLockoutTime = Date.now() + LOCKOUT_DURATION_MS;
+                    setLockoutTime(newLockoutTime);
+                    localStorage.setItem('lockoutEndTime', newLockoutTime.toString());
+                    setLoginMessage({type: 'error', text: t.loginAttemptsExceeded});
+                } else {
+                    setLoginMessage({type: 'error', text: `${result.message} ${MAX_LOGIN_ATTEMPTS - newAttempts} ${t.attemptsLeft}`});
+                }
+            }
+        } else {
+            localStorage.removeItem('loginAttempts');
+            localStorage.removeItem('lockoutEndTime');
+        }
+    };
+
+    const roles = [
+        { key: 'Viewer', icon: Eye, title: t.viewer, desc: t.roleDescription_viewer },
+        { key: 'Admin', icon: Shield, title: t.admin, desc: t.roleDescription_admin },
+        { key: 'tempAdmin', icon: Timer, title: t.tempAdmin, desc: t.roleDescription_tempAdmin },
+    ];
+
+    return (
+        <div className="w-full h-screen flex flex-col justify-center items-center bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white p-4">
+            <div className="w-full max-w-sm p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl">
+                <div className="text-center mb-6"><Dna className="mx-auto text-blue-500" size={48} /><h1 className="text-3xl font-bold mt-2">{t.appName}</h1></div>
+                <div className="mb-4 flex justify-around border-b border-gray-200 dark:border-gray-700">{roles.map(role => { const IconComponent = role.icon; return ( <button key={role.key} onClick={() => setLoginAs(role.key)} className={`flex-1 text-center p-3 transition-colors duration-200 ${loginAs === role.key ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}><IconComponent className="mx-auto" size={20} /><span className="text-sm font-medium">{role.title}</span></button> ); })}</div>
+                <p className="text-center text-xs text-gray-500 dark:text-gray-400 mb-4 min-h-[2.5rem]">{roles.find(r => r.key === loginAs)?.desc}</p>
+                <form onSubmit={handleLoginAttempt} className="space-y-4">
+                    <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full px-4 py-3 rounded-lg bg-gray-200 dark:bg-gray-700 border-transparent focus:border-blue-500 focus:bg-white dark:focus:bg-gray-600 focus:ring-0 text-md" placeholder={loginAs === 'tempAdmin' ? t.tempAdminLogin : t.password}/>
+                    {loginMessage && loginMessage.text && <p className={`${loginMessage.type === 'error' ? 'text-red-500' : 'text-green-500'} text-sm text-center`}>{loginMessage.text}</p>}
+                    {countdown > 0 && <p className="text-yellow-500 text-sm text-center">{countdown} {t.lockedOut}</p>}
+                    <button type="submit" disabled={countdown > 0} className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-md font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400">{t.login}</button>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+const ProtectedSubtreesPage = () => {
+    const { protectedSubtrees, members, handleUnlockBranch, handleRegenerateCode, language } = useContext(AppContext);
+    const t = translations[language];
+    const membersById = useMemo(() => members.reduce((acc, m) => ({ ...acc, [m.id]: m }), {}), [members]);
+
+    const getTimeLeft = (expiresAt) => {
+        if (!expiresAt) return '';
+        const now = Date.now();
+        const expiry = expiresAt.toDate().getTime();
+        const diff = expiry - now;
+
+        if (diff <= 0) return t.expired;
+
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+        return `${days}g ${hours}s ${minutes}d`;
+    };
+
+    return (
+        <div className="p-4 md:p-8 max-w-4xl mx-auto text-gray-900 dark:text-gray-100">
+            <h1 className="text-3xl font-bold mb-6">{t.protectedSubtrees}</h1>
+            <div className="space-y-4">
+                {protectedSubtrees.length > 0 ? protectedSubtrees.map(branch => {
+                    const member = membersById[branch.rootMemberId];
+                    if (!member) return null;
+                    const name = member[`name_${language}`] || member.name_tr;
+                    const surname = member[`surname_${language}`] || member.surname_tr;
+                    return (
+                        <div key={branch.id} className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="flex-1">
+                                <h3 className="text-lg font-semibold">{name} {surname}</h3>
+                                <div className="flex items-center gap-2 font-mono text-blue-500 dark:text-blue-400 mt-1">
+                                    <KeyRound size={16} />
+                                    <span>{branch.code}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                    <Clock size={16} />
+                                    <span>{getTimeLeft(branch.expiresAt)}</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                                <button onClick={() => handleRegenerateCode(branch.rootMemberId)} className="px-3 py-2 text-sm bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-md hover:bg-blue-200 dark:hover:bg-blue-900/60 flex items-center gap-2">
+                                    <RefreshCw size={14} /> {t.regenerateCode}
+                                </button>
+                                <button onClick={() => handleUnlockBranch(branch.rootMemberId)} className="px-3 py-2 text-sm bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 rounded-md hover:bg-green-200 dark:hover:bg-green-900/60 flex items-center gap-2">
+                                    <Unlock size={14} /> {t.unlockSubtree}
+                                </button>
+                            </div>
+                        </div>
+                    );
+                }) : <p className="text-gray-500">{t.noProtectedBranches}</p>}
+            </div>
+        </div>
+    );
+};
+
+const UnlockSubtreeModal = ({ isOpen, onClose, member, onVerify }) => {
+    const { language } = useContext(AppContext);
+    const t = translations[language];
+    const [code, setCode] = useState('');
+    const [error, setError] = useState('');
+    const [isVerifying, setIsVerifying] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        setIsVerifying(true);
+        const success = await onVerify(member.id, code);
+        if (!success) {
+            setError(t.wrongPassword);
+        }
+        setIsVerifying(false);
+    };
+
+    useEffect(() => {
+        if (!isOpen) {
+            setCode('');
+            setError('');
+            setIsVerifying(false);
+        }
+    }, [isOpen]);
+
+    if (!isOpen || !member) return null;
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={t.protectedBranch}>
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <p className="text-sm text-gray-600 dark:text-gray-300">{t.enterSubtreePassword}</p>
+                <div>
+                    <label htmlFor="accessCode" className="block text-sm font-medium">{t.accessCode}</label>
+                    <input
+                        id="accessCode"
+                        value={code}
+                        onChange={(e) => setCode(e.target.value.toUpperCase())}
+                        className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 mt-1 font-mono tracking-wider"
+                        required
+                    />
+                </div>
+                {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+                <div className="flex justify-end gap-2 pt-2">
+                    <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded-md">{t.cancel}</button>
+                    <button type="submit" disabled={isVerifying} className="px-4 py-2 bg-blue-600 text-white rounded-md flex items-center gap-2 disabled:bg-gray-400">
+                        {isVerifying && <Dna size={16} className="animate-spin" />}
+                        {t.unlock}
+                    </button>
+                </div>
+            </form>
+        </Modal>
+    );
+};
+
+
+export default function App() {
+    const firebaseConfig = useMemo(() => {
+        try {
+            return typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        } catch (e) {
+            console.error("Firebase config parse error:", e);
+            return null;
+        }
+    }, []);
+
+    const appId = useMemo(() => typeof __app_id !== 'undefined' ? __app_id : 'default-app-id', []);
+
+    const [fb, setFb] = useState({ app: null, auth: null, db: null });
+    const [language, setLanguage] = useState('ar');
+    const [theme, setTheme] = useState('light');
+    const [user, setUser] = useState(null);
+    const [members, setMembers] = useState([]);
+    const [codes, setCodes] = useState([]);
+    const [adminProfiles, setAdminProfiles] = useState([]);
+    const [protectedSubtrees, setProtectedSubtrees] = useState([]);
+    const [authReady, setAuthReady] = useState(false);
+    const [showSplash, setShowSplash] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState('tree');
+    const [loginMessage, setLoginMessage] = useState({ type: '', text: '' });
+    const [transform, setTransform] = useState({ x: 0, y: 0, scale: 0.7 });
+    const [unlockedSubtrees, setUnlockedSubtrees] = useState([]);
+    const [newlyAddedMemberId, setNewlyAddedMemberId] = useState(null);
+    const [resetTrigger, setResetTrigger] = useState(0);
+
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingMember, setEditingMember] = useState(null);
+    const [newMemberParentId, setNewMemberParentId] = useState(null);
+    
+    const [unlockModalState, setUnlockModalState] = useState({ isOpen: false, member: null });
+
+    const openAddModal = (parentId = null) => {
+        setEditingMember(null);
+        setNewMemberParentId(parentId);
+        setIsModalOpen(true);
+    };
+
+    const openEditModal = (member) => {
+        setEditingMember(member);
+        setNewMemberParentId(null);
+        setIsModalOpen(true);
+    };
+
+    const closeModal = () => {
+        setIsModalOpen(false);
+        setEditingMember(null);
+        setNewMemberParentId(null);
+    };
+
+    const openUnlockModal = (member) => setUnlockModalState({ isOpen: true, member });
+    const closeUnlockModal = () => setUnlockModalState({ isOpen: false, member: null });
+
+    const resetView = useCallback(() => {
+        setResetTrigger(t => t + 1);
+    }, []);
+
+
+    useEffect(() => {
+        if (firebaseConfig && !fb.app) {
+            try {
+                const app = initializeApp(firebaseConfig);
+                const auth = getAuth(app);
+                const db = getFirestore(app);
+                setFb({ app, auth, db });
+            } catch (error) {
+                console.error("Firebase initialization error:", error);
+            }
+        }
+    }, [firebaseConfig, fb.app]);
+
+    useEffect(() => {
+        document.documentElement.lang = language;
+        document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
+        const timerId = setTimeout(() => resetView(), 0);
+        return () => clearTimeout(timerId);
+    }, [language, resetView]);
+
+    useEffect(() => {
+        document.documentElement.classList.toggle('dark', theme === 'dark');
+    }, [theme]);
+    
+    useEffect(() => {
+        if (!fb.auth) {
+            setAuthReady(true);
+            return;
+        }
+        const unsubscribe = onAuthStateChanged(fb.auth, (firebaseUser) => {
+            const storedRole = sessionStorage.getItem('userRole');
+            if(firebaseUser && storedRole) {
+                setUser({
+                    uid: firebaseUser.uid,
+                    role: storedRole,
+                    maxAdds: parseInt(sessionStorage.getItem('maxAdds') || '0', 10),
+                    membersAdded: parseInt(sessionStorage.getItem('membersAdded') || '0', 10)
+                });
+            } else {
+                setUser(null);
+                setCurrentPage('tree');
+                setUnlockedSubtrees([]);
+                sessionStorage.clear();
+            }
+            setAuthReady(true);
+        });
+        return () => unsubscribe();
+    }, [fb.auth]);
+    
+    useEffect(() => {
+        if (!user || !fb.db) {
+            setAdminProfiles([]);
+            setMembers([]);
+            setCodes([]);
+            setProtectedSubtrees([]);
+            return;
+        }
+
+        const unsubscribers = [];
+        
+        const profilesCollection = collection(fb.db, `artifacts/${appId}/public/data/adminProfiles`);
+        unsubscribers.push(onSnapshot(query(profilesCollection), (snapshot) => {
+            setAdminProfiles(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        }));
+
+        const membersCollection = collection(fb.db, `artifacts/${appId}/public/data/familyMembers`);
+        unsubscribers.push(onSnapshot(query(membersCollection), (snapshot) => {
+            setMembers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        }));
+
+        if(user.role === 'Admin') {
+            const codesCollection = collection(fb.db, `artifacts/${appId}/public/data/tempAdminCodes`);
+            unsubscribers.push(onSnapshot(query(codesCollection), (snapshot) => {
+                setCodes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            }));
+            
+            const protectedCollection = collection(fb.db, `artifacts/${appId}/public/data/protectedSubtrees`);
+            unsubscribers.push(onSnapshot(query(protectedCollection), (snapshot) => {
+                setProtectedSubtrees(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            }));
+        }
+        
+        return () => unsubscribers.forEach(unsub => unsub());
+    }, [user, fb.db, appId]);
+
+
+    const getDeviceInfo = useCallback(() => {
+        const ua = navigator.userAgent;
+        let browser = "Unknown", os = "Unknown";
+        if (ua.includes("Firefox")) browser = "Firefox";
+        else if (ua.includes("Chrome")) browser = "Chrome";
+        else if (ua.includes("Safari")) browser = "Safari";
+        if (ua.includes("Win")) os = "Windows"; else if (ua.includes("Mac")) os = "MacOS";
+        else if (ua.includes("Android")) os = "Android"; else if (ua.includes("like Mac")) os = "iOS";
+        return { browser, os };
+    }, []);
+
+    const logActivity = useCallback(async (action, userRole, details = {}) => {
+        if (!fb.db || !fb.auth.currentUser) return;
+        try {
+            await addDoc(collection(fb.db, `artifacts/${appId}/public/data/activityLogs`), {
+                userId: fb.auth.currentUser.uid, userRole, action, details, timestamp: new Date(), deviceInfo: getDeviceInfo(),
+            });
+        } catch (error) { console.error("Error logging activity:", error); }
+    }, [fb.db, fb.auth, appId, getDeviceInfo]);
+
+    const handleSaveMember = async (formData, parentId) => {
+        if(!fb.db) return;
+        
+        const memberData = { ...formData };
+        const isNew = !memberData.id;
+
+        if (isNew) {
+            if (user.role === 'tempAdmin' && user.maxAdds > 0 && (user.membersAdded || 0) >= user.maxAdds) {
+                console.log(translations[language].accessLimited);
+                return;
+            }
+            const newDocRef = doc(collection(fb.db, `artifacts/${appId}/public/data/familyMembers`));
+            memberData.id = newDocRef.id;
+            memberData.parentId = parentId;
+            setNewlyAddedMemberId(memberData.id);
+        }
+        
+        const docRef = doc(fb.db, `artifacts/${appId}/public/data/familyMembers`, memberData.id);
+        await setDoc(docRef, memberData, { merge: true });
+
+        if(isNew && user.role === 'tempAdmin') {
+            const newCount = (user.membersAdded || 0) + 1;
+            setUser(u => ({ ...u, membersAdded: newCount }));
+            sessionStorage.setItem('membersAdded', newCount.toString());
+        }
+
+        logActivity(isNew ? 'add_member' : 'edit_member', user.role, { memberId: memberData.id, name: memberData.name_tr });
+        closeModal();
+    };
+
+    const handleLogin = useCallback(async (password, role) => {
+        if (!fb.auth || !fb.db) {
+            return { success: false, message: "Database connection could not be established." };
+        }
+        
+        const t = translations[language];
+        setLoginMessage({ type: '', text: '' });
+        setUnlockedSubtrees([]);
+        
+        try {
+            if (!fb.auth.currentUser) {
+                const initialToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                if (initialToken) {
+                    await signInWithCustomToken(fb.auth, initialToken);
+                } else {
+                    await signInAnonymously(fb.auth);
+                }
+            }
+
+            let isAuthorized = false;
+            let sessionInfo = { role, membersAdded: 0, maxAdds: 0 };
+
+            if (role === 'Admin' || role === 'Viewer') {
+                const adminDocRef = doc(fb.db, `artifacts/${appId}/public/data/siteInfo`, 'passwords');
+                const adminDoc = await getDoc(adminDocRef);
+                
+                const passwords = adminDoc.exists() && adminDoc.data().admin && adminDoc.data().viewer 
+                    ? adminDoc.data() 
+                    : { admin: "1kahya.571.1905", viewer: "kahya.571" };
+
+                if (role === 'Admin' && password === passwords.admin) isAuthorized = true;
+                if (role === 'Viewer' && password === passwords.viewer) isAuthorized = true;
+
+            } else if (role === 'tempAdmin') {
+                const codeRef = doc(fb.db, `artifacts/${appId}/public/data/tempAdminCodes`, password.toUpperCase());
+                await runTransaction(fb.db, async (transaction) => {
+                    const codeDoc = await transaction.get(codeRef);
+                    if (!codeDoc.exists()) throw new Error(t.tempAdminError);
+                    
+                    const data = codeDoc.data();
+                    const now = Timestamp.now();
+                    let isValid = false;
+
+                    if (data.type === 'time' && data.expiresAt.toMillis() > now.toMillis()) isValid = true;
+                    else if (data.type === 'usage' && data.usesLeft > 0) {
+                        isValid = true;
+                        transaction.update(codeRef, { usesLeft: data.usesLeft - 1 });
+                    }
+                    
+                    if (!isValid) throw new Error(t.tempAdminError);
+
+                    isAuthorized = true;
+                    sessionInfo.maxAdds = data.maxAdds;
+                });
+            }
+
+            if (!isAuthorized) {
+                setLoginMessage({ type: 'error', text: t.loginError });
+                return { success: false, message: t.loginError };
+            }
+
+            Object.keys(sessionInfo).forEach(key => sessionStorage.setItem(String(key), String(sessionInfo[key])));
+            setUser({ uid: fb.auth.currentUser.uid, ...sessionInfo });
+            await logActivity('login', role);
+            if (role === 'tempAdmin') setLoginMessage({ type: 'success', text: t.tempAdminSuccess });
+            
+            return { success: true };
+
+        } catch (error) {
+            console.error("Login failed with error:", error);
+            const errorMessage = error.message.includes(t.tempAdminError) ? t.tempAdminError : 'An error occurred.';
+            setLoginMessage({ type: 'error', text: errorMessage });
+            return { success: false, message: errorMessage };
+        }
+    }, [fb.auth, fb.db, appId, language, setUser]);
+
+    const handleLogout = async () => {
+        if (!fb.auth || !user) return;
+        await logActivity('logout', user.role);
+        await signOut(fb.auth);
+    };
+
+    const handleLockSubtree = async (memberId, shouldLock) => {
+        if (!fb.db) return;
+        const memberRef = doc(fb.db, `artifacts/${appId}/public/data/familyMembers`, memberId);
+        if (shouldLock) {
+            const durationMinutes = 60; // Default lock time
+            const code = `${Math.random().toString(36).substring(2, 5)}-${Math.random().toString(36).substring(2, 5)}-${Math.random().toString(36).substring(2, 5)}`.toUpperCase();
+            const expiresAt = Timestamp.fromMillis(Date.now() + durationMinutes * 60 * 1000);
+            
+            await updateDoc(memberRef, { isSubtreeLocked: true });
+            const lockRef = doc(fb.db, `artifacts/${appId}/public/data/protectedSubtrees`, memberId);
+            await setDoc(lockRef, { rootMemberId: memberId, code, expiresAt, duration: durationMinutes });
+        } else {
+            await updateDoc(memberRef, { isSubtreeLocked: deleteField() });
+            const lockRef = doc(fb.db, `artifacts/${appId}/public/data/protectedSubtrees`, memberId);
+            await deleteDoc(lockRef);
+        }
+        closeModal();
+    };
+
+    const handleUnlockBranch = async (memberId) => {
+        await handleLockSubtree(memberId, false);
+    };
+
+    const handleRegenerateCode = async (memberId) => {
+        if (!fb.db) return;
+        const durationMinutes = 60;
+        const code = `${Math.random().toString(36).substring(2, 5)}-${Math.random().toString(36).substring(2, 5)}-${Math.random().toString(36).substring(2, 5)}`.toUpperCase();
+        const expiresAt = Timestamp.fromMillis(Date.now() + durationMinutes * 60 * 1000);
+        const lockRef = doc(fb.db, `artifacts/${appId}/public/data/protectedSubtrees`, memberId);
+        await updateDoc(lockRef, { code, expiresAt, duration: durationMinutes });
+    };
+
+    const handleVerifyCode = async (memberId, code) => {
+        if (!fb.db) return false;
+        const lockRef = doc(fb.db, `artifacts/${appId}/public/data/protectedSubtrees`, memberId);
+        const lockDoc = await getDoc(lockRef);
+
+        if (lockDoc.exists()) {
+            const data = lockDoc.data();
+            if (data.code === code && data.expiresAt.toMillis() > Date.now()) {
+                setUnlockedSubtrees(prev => [...prev, memberId]);
+                closeUnlockModal();
+                return true;
+            }
+        }
+        return false;
+    };
+
+    const contextValue = { language, setLanguage, theme, setTheme, user, setUser, handleLogin, handleLogout, logActivity: (action, details) => user && logActivity(action, user.role, details), members, codes, adminProfiles, db: fb.db, appId, searchTerm, setSearchTerm, currentPage, setCurrentPage, loginMessage, setLoginMessage, openAddModal, openEditModal, closeModal, transform, setTransform, handleSaveMember, unlockedSubtrees, newlyAddedMemberId, setNewlyAddedMemberId, resetTrigger, resetView, handleLockSubtree, protectedSubtrees, handleUnlockBranch, handleRegenerateCode, openUnlockModal };
+
+    if (showSplash) return <SplashScreen onFinish={() => setShowSplash(false)} />;
+    if (!authReady || !firebaseConfig) {
+        return <div className="w-full h-screen flex justify-center items-center bg-gray-100 dark:bg-gray-900"><Dna className="animate-spin text-blue-500" size={64}/></div>;
+    }
+
+    const renderPage = () => {
+        if (!user) return <LoginScreen onLogin={handleLogin} />;
+        switch (currentPage) {
+            case 'codeManager': return <CodeManagerPage />;
+            case 'passwordManager': return <PasswordManagerPage />;
+            case 'adminProfiles': return <AdminProfilesPage />;
+            case 'protectedSubtrees': return <ProtectedSubtreesPage />;
+            case 'tree':
+            default: return <FamilyTree />;
+        }
+    }
+
+    return (
+        <AppContext.Provider value={contextValue}>
+            <div className={`w-screen h-screen font-sans ${theme} bg-gray-100 dark:bg-gray-900`}>
+                {user && <TopBar user={user} searchTerm={searchTerm} setSearchTerm={setSearchTerm} currentPage={currentPage} openAddModal={openAddModal} handleLogout={handleLogout} resetView={resetView} />}
+                <div className={`w-full h-full ${user ? 'pt-16' : ''}`}>
+                    {renderPage()}
+                </div>
+                {user && currentPage === 'tree' && (
+                    <div className="absolute bottom-4 right-4 z-20 flex items-center bg-black/20 backdrop-blur-sm p-1 rounded-full shadow-lg">
+                        <button onClick={() => setTransform(p => ({...p, scale: Math.min(p.scale * 1.2, 3)}))} className="p-2 text-white hover:bg-white/20 rounded-full" title={translations[language].zoomIn}><Plus size={20}/></button>
+                        <button onClick={() => setTransform(p => ({...p, scale: Math.max(p.scale / 1.2, 0.2)}))} className="p-2 text-white hover:bg-white/20 rounded-full" title={translations[language].zoomOut}><Minus size={20}/></button>
+                        <button onClick={resetView} className="p-2 text-white hover:bg-white/20 rounded-full" title={translations[language].resetView}><Maximize size={20}/></button>
+                    </div>
+                )}
+                <Modal isOpen={isModalOpen} onClose={closeModal} title={editingMember ? translations[language].editMember : translations[language].addMember}>
+                    <MemberForm
+                        member={editingMember}
+                        parentId={newMemberParentId}
+                        onSave={handleSaveMember}
+                        onCancel={closeModal}
+                    />
+                </Modal>
+                <UnlockSubtreeModal 
+                    isOpen={unlockModalState.isOpen}
+                    onClose={closeUnlockModal}
+                    member={unlockModalState.member}
+                    onVerify={handleVerifyCode}
+                />
+            </div>
+        </AppContext.Provider>
+    );
+}
